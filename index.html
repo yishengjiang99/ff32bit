@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Mocha Tests</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<link rel="stylesheet" href="https://unpkg.com/mocha/mocha.css" />
+	</head>
+	<body>
+		<div id="mocha"></div>
+		<script type="module">
+			import { setup } from "./build/index.js";
+			const btn = document.createElement("button");
+			btn.innerHTML = "btn";
+			const stdout = document.createElement("pre");
+			document.body.append(stdout);
+			const logstr = (str) => {
+				requestAnimationFrame(() => (stdout.innerHTML = str));
+			};
+			btn.onclick = async function () {
+				const node = await initProcessor();
+				const worker = new Worker("./build/playback-worker.js", { type: "module" });
+				worker.onmessage = ({ data }) => {
+					logstr(JSON.stringify(data));
+				};
+				worker.postMessage({ port: node.port }, [node.port]);
+				worker.postMessage({ url: "/f32-ac2-ar48000.pcm" });
+			};
+			document.body.append(btn);
+		</script>
+	</body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "name": "32bit-audio",
+  "version": "1.0.0",
+  "description": "when given a choice between 0xFFFF 0xFFFFF",
+  "main": "./build/index.js",
+  "types": "./types.d.ts",
+  "scripts": {
+    "postinstall": "tsc",
+    "test": "tsc && serve ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
