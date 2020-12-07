@@ -1,44 +1,46 @@
 ///<reference path="../types.d.ts" />;
 
-import { procURL, workerUrl } from "./playback-proc-blob";
-export type PlaybackOptions = {
-	nchannels: number;
-	sampleRate: 44100 | 48000;
-	bitdepth: 32;
-};
-let node: AudioWorkletNode, worker: Worker, ctx: AudioContext;
-const defaultConfig: PlaybackOptions = { sampleRate: 48000, nchannels: 2, bitdepth: 32 };
+import Worker from "worker-loader!./Worker";
 
-export const setup = async (config: PlaybackOptions) => {
-	const ctx = new AudioContext({
-		sampleRate: config.sampleRate || 44100,
-		latencyHint: "playback",
-	});
-	await ctx.audioWorklet.addModule(procURL);
-	node = new AudioWorkletNode(ctx, "playback-processor", {
-		outputChannelCount: [2],
-	});
-	node.connect(ctx.destination);
+import { PlaybackOptions } from "../types";
+export class Float32Radio {
+  static defaultConfig: PlaybackOptions = {
+    sampleRate: 48000,
+    nchannels: 2,
+    bitdepth: 32,
+  };
+  ctx: AudioContext;
+  worklet!: AudioWorkletNode;
+  worker!: Worker;
 
-	worker = new Worker(workerUrl, { type: "module" });
-	worker.postMessage({ port: node.port }, [node.port]);
+  constructor(config: PlaybackOptions = Float32Radio.defaultConfig) {
+    this.ctx = new AudioContext({
+      sampleRate: config.sampleRate || 44100,
+      latencyHint: "playback",
+    });
+    this.setup.bind(this);
+  }
+  async setup() {
+    this.ctx = new AudioContext();
+    await this.ctx.audioWorklet.addModule("./proc");
+    this.worklet = new AudioWorkletNode(this.ctx, "playback-processor", {
+      outputChannelCount: [2],
+    });
+    this.worklet.connect(this.ctx.destination);
+    this.worker = new Worker();
+    this.worker.postMessage({ port: this.worklet.port }, [this.worklet.port]);
+    this.worker.onmessage = ({ data }) => console.log(data);
+    this.worklet.onprocessorerror = console.log;
+  }
+  queue(url: string) {
+    this.worker.postMessage({ url });
+  }
 
-	function queue(url: string) {
-		worker.postMessage({ url });
-	}
+  playNow(url: string) {
+    this.worker.postMessage({ url });
+  }
 
-	function playNow(url: string) {
-		worker.postMessage({ url });
-	}
-
-	function next() {
-		worker.postMessage({ cmd: "ff" });
-	}
-	return {
-		worker,
-		node,
-		queue,
-		playNow,
-		next,
-	};
-};
+  next() {
+    this.worker.postMessage({ cmd: "ff" });
+  }
+}
