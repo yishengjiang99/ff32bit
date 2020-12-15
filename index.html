@@ -1,32 +1,55 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<title>Mocha Tests</title>
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<link rel="stylesheet" href="https://unpkg.com/mocha/mocha.css" />
-	</head>
-	<body>
-		<div id="mocha"></div>
-		<script type="module">
-			import { setup } from "./build/index.js";
-			const btn = document.createElement("button");
-			btn.innerHTML = "btn";
-			const stdout = document.createElement("pre");
-			document.body.append(stdout);
-			const logstr = (str) => {
-				requestAnimationFrame(() => (stdout.innerHTML = str));
-			};
-			btn.onclick = async function () {
-				const node = await initProcessor();
-				const worker = new Worker("./build/playback-worker.js", { type: "module" });
-				worker.onmessage = ({ data }) => {
-					logstr(JSON.stringify(data));
-				};
-				worker.postMessage({ port: node.port }, [node.port]);
-				worker.postMessage({ url: "/f32-ac2-ar48000.pcm" });
-			};
-			document.body.append(btn);
-		</script>
-	</body>
+  <head>
+    <meta charset="utf-8" />
+    <title>Mocha</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="mocha.css" />
+    <style>
+      a {
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="mocha">
+      <a href="https://grep32bit.blob.core.windows.net/pcm/billiebadguy.pcm"
+        >Billie Erish</a
+      >
+    </div>
+    <div id="mocha">
+      <a href="https://grep32bit.blob.core.windows.net/pcm/byebyebye.pcm"
+        >N'Sync</a
+      >
+    </div>
+    <div id="mocha">
+      <a href="https://grep32bit.blob.core.windows.net/pcm/song-f32le.pcm"
+        >Miami</a
+      >
+    </div>
+    <div id="mocha">
+      <a href="https://grep32bit.blob.core.windows.net/pcm/f32DARE.pcm"
+        >Gorillaz</a
+      >
+    </div>
+    <div id="mocha">
+      <a href="https://grep32bit.blob.core.windows.net/pcm/f32DARE.pcm"
+        >Start</a
+      >
+      <br /><a href="#stop">stop</a>
+    </div>
+    <script src="./mocha.js"></script>
+    <script type="module">
+      import { FF32Play } from "./dist/index.js";
+      let fp;
+
+      document.querySelectorAll("a").forEach((a) => {
+        a.onclick = (e) => {
+          e.preventDefault();
+          fp = fp || new FF32Play();
+          fp.queue(a.href);
+        };
+      });
+    </script>
+  </body>
 </html>

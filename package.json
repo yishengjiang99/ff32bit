@@ -1,14 +1,20 @@
 {
-  "name": "32bit-audio",
+  "name": "y",
   "version": "1.0.0",
-  "description": "when given a choice between 0xFFFF 0xFFFFF",
+  "description": "the <strike>dark</strike> AWESOME side of 0x7fff0000",
   "main": "./build/index.js",
-  "types": "./types.d.ts",
-  "scripts": {
-    "postinstall": "tsc",
-    "test": "tsc && serve ."
-  },
-  "keywords": [],
+  "types": "./src/typing/FF32Play.d.ts",
+  "keywords": [
+    "rap music",
+    "ES2018 streams"
+  ],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "build": "webpack",
+    "test": "mocha"
+  }
 }
