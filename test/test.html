@@ -1,82 +1,90 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<title>Mocha Tests</title>
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<link rel="stylesheet" href="https://unpkg.com/mocha/mocha.css" />
-	</head>
-	<body>
-		<div id="mocha"></div>
+  <head>
+    <meta charset="utf-8" />
+    <title>Mocha Tests</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="https://unpkg.com/mocha/mocha.css" />
+  </head>
+  <body>
+    <div id="mocha"></div>
 
-		<script src="https://unpkg.com/chai/chai.js"></script>
-		<script src="https://unpkg.com/mocha/mocha.js"></script>
+    <script src="https://unpkg.com/chai/chai.js"></script>
+    <script src="https://unpkg.com/mocha/mocha.js"></script>
 
-		<script class="mocha-init">
-			mocha.setup("bdd");
-			mocha.checkLeaks();
-			// Examples of options:
-			mocha.setup({
-				allowUncaught: true,
-				asyncOnly: false,
-				bail: true,
-				checkLeaks: true,
-				forbidOnly: true,
-				forbidPending: true,
-				ui: "bdd",
-			});
-			window.expect = chai.expect;
-		</script>
-		<!-- <script type="module" src="./test/worker.spec.js"></script> -->
-		<script type="module" class="mocha-exec">
-			import { initProcessor, postStream, setup } from "./build/index.js";
-			import { fetchLoader } from "./build/fetch-url.js";
+    <script class="mocha-init">
+      mocha.setup("bdd");
+      mocha.checkLeaks();
+      // Examples of options:
+      mocha.setup({
+        allowUncaught: true,
+        asyncOnly: false,
+        bail: true,
+        checkLeaks: true,
+        forbidOnly: true,
+        forbidPending: true,
+        ui: "bdd",
+      });
+      window.expect = chai.expect;
+    </script>
+    <!-- <script type="module" src="./test/worker.spec.js"></script> -->
+    <script type="module" class="mocha-exec">
+      import { initProcessor, postStream, setup } from "./build/index.js";
+      import { fetchLoader } from "./build/fetch-url.js";
 
-			describe("fetchworker", () => {
-				const worker = new Worker("./build/playback-worker.js", { type: "module" });
+      describe("fetchworker", () => {
+        const worker = new Worker("./build/playback-worker.js", {
+          type: "module",
+        });
 
-				it("can instantiate self", () => {
-					expect(worker).exist;
-				});
-				it("can pass it an url", async () => {
-					const { port1, port2 } = new MessageChannel();
+        it("can instantiate self", () => {
+          expect(worker).exist;
+        });
+        it("can pass it an url", async () => {
+          const { port1, port2 } = new MessageChannel();
 
-					worker.postMessage({ url: "/samples/sample.mp3", port: port2 }, [port2]);
-					await new Promise((resolve) => {
-						port1.onmessage = ({ data: { readable } }) => {
-							expect(readable).exist;
+          worker.postMessage({ url: "/samples/sample.mp3", port: port2 }, [
+            port2,
+          ]);
+          await new Promise((resolve) => {
+            port1.onmessage = ({ data: { readable } }) => {
+              expect(readable).exist;
 
-							resolve();
-						};
-					});
-				}).timeout(45000);
+              resolve();
+            };
+          });
+        }).timeout(45000);
 
-				it("loading 10 second audion on main thread", async (done) => {}).timeout(55555);
-			});
+        it("loading 10 second audion on main thread", async (done) => {}).timeout(
+          55555
+        );
+      });
 
-			describe("setup", () => {
-				it("gg", () => {
-					setup();
-				});
-			});
-			mocha.run();
-			const btn = document.createElement("button");
-			btn.innerHTML = "btn";
-			const stdout = document.createElement("pre");
-			document.body.append(stdout);
-			const logstr = (str) => {
-				requestAnimationFrame(() => (stdout.innerHTML = str));
-			};
-			btn.onclick = async function () {
-				const node = await initProcessor();
-				const worker = new Worker("./build/playback-worker.js", { type: "module" });
-				worker.onmessage = ({ data }) => {
-					logstr(JSON.stringify(data));
-				};
-				worker.postMessage({ port: node.port }, [node.port]);
-				worker.postMessage({ url: "/f32-ac2-ar48000.pcm" });
-			};
-			document.body.append(btn);
-		</script>
-	</body>
+      describe("setup", () => {
+        it("gg", () => {
+          setup();
+        });
+      });
+      mocha.run();
+      const btn = document.createElement("button");
+      btn.innerHTML = "btn";
+      const stdout = document.createElement("pre");
+      document.body.append(stdout);
+      const logstr = (str) => {
+        requestAnimationFrame(() => (stdout.innerHTML = str));
+      };
+      btn.onclick = async function () {
+        const node = await initProcessor();
+        const worker = new Worker("./build/playback-worker.js", {
+          type: "module",
+        });
+        worker.onmessage = ({ data }) => {
+          logstr(JSON.stringify(data));
+        };
+        worker.postMessage({ port: node.port }, [node.port]);
+        worker.postMessage({ url: "/f32-ac2-ar48000.pcm" });
+      };
+      document.body.append(btn);
+    </script>
+  </body>
 </html>
