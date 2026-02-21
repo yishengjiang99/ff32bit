@@ -1,45 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>FF32Bit Player</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <style>
-      a {
-        width: 100%;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="player">
-      <a href="https://www.grepawk.com/bach/pcm">bach</a>
-    </div>
-    <div class="player">
-      <a href="https://grep32bit.blob.core.windows.net/pcm/billiebadguy.pcm"
-        >Billie Erish</a
-      >
-    </div>
-    <div class="player">
-      <a href="https://grep32bit.blob.core.windows.net/pcm/byebyebye.pcm"
-        >N'Sync</a
-      >
-    </div>
-    <div class="player">
-      <a href="https://grep32bit.blob.core.windows.net/pcm/song-f32le.pcm"
-        >Miami</a
-      >
-    </div>
-    <div class="player">
-      <a href="https://grep32bit.blob.core.windows.net/pcm/f32DARE.pcm"
-        >Gorillaz</a
-      >
-    </div>
-    <div class="player">
-      <a href="https://grep32bit.blob.core.windows.net/pcm/f32DARE.pcm"
-        >Start</a
-      >
-      <br /><a href="#stop">stop</a>
-    </div>
-    <script type="module" src="/src/ffplayer.ts"></script>
-  </body>
+
+<head>
+  <meta charset="utf-8" />
+  <title>FF32Bit Player</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    a {
+      width: 100%;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="player">
+    <a href="/file_example_WAV_10MG.wav">sample</a>
+  </div>
+  <script type="module">
+    import { FF32Play } from "./src/ffplayer.ts";
+    // App initialization when loaded directly in a browser
+    if (typeof document !== "undefined") {
+      document.addEventListener("DOMContentLoaded", () => {
+        let fp;
+        document.querySelectorAll("a").forEach((a) => {
+          a.onclick = (e) => {
+            e.preventDefault();
+            fp = fp || new FF32Play();
+            fp.queue(a.href);
+          };
+        });
+      });
+    }
+
+  </script>
+</body>
+
 </html>
