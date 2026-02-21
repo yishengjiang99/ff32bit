@@ -8,6 +8,12 @@ declare class AudioWorkletProcessor {
 }
 declare function registerProcessor(name: string, ctor: typeof AudioWorkletProcessor): void;
 
+// Number of bytes to skip for WAV format (48 bytes covers the standard 44-byte PCM
+// header plus any alignment padding, as specified by the project requirements)
+const WAV_HEADER_SKIP = 48;
+// RIFF magic bytes that identify WAV files
+const RIFF_MAGIC = [0x52, 0x49, 0x46, 0x46]; // "RIFF"
+
 class PlaybackProcessor extends AudioWorkletProcessor {
   buffers: Uint8Array[];
   started: boolean;
@@ -17,6 +23,7 @@ class PlaybackProcessor extends AudioWorkletProcessor {
   totalFrames: number;
   leftPartialFrame: Uint8Array | null;
   readable: ReadableStream | null;
+  bytesToSkip: number;
 
   constructor() {
     super();
@@ -30,6 +37,7 @@ class PlaybackProcessor extends AudioWorkletProcessor {
     this.totalFrames = 0;
     this.leftPartialFrame = null;
     this.readable = null;
+    this.bytesToSkip = 0;
   }
 
   handleMesg(evt: MessageEvent) {
@@ -40,6 +48,7 @@ class PlaybackProcessor extends AudioWorkletProcessor {
       (this.readable as any).cancel();
     }
     this.started = false;
+    this.bytesToSkip = 0;
     this.readable = evt.data.readable;
     const reader = (this.readable as ReadableStream<Uint8Array>).getReader();
     const that = this;
@@ -49,6 +58,21 @@ class PlaybackProcessor extends AudioWorkletProcessor {
       }
       if (!value) {
         return reader.read().then(process);
+      }
+      // Detect WAV format (RIFF header) on first chunk and skip header bytes
+      if (that.bytesToSkip === 0 &&
+          value.length >= 4 &&
+          value[0] === RIFF_MAGIC[0] && value[1] === RIFF_MAGIC[1] &&
+          value[2] === RIFF_MAGIC[2] && value[3] === RIFF_MAGIC[3]) {
+        that.bytesToSkip = WAV_HEADER_SKIP;
+      }
+      if (that.bytesToSkip > 0) {
+        const skip = Math.min(that.bytesToSkip, value.length);
+        value = value.slice(skip);
+        that.bytesToSkip -= skip;
+        if (value.length === 0) {
+          return reader.read().then(process);
+        }
       }
       while (value.length >= chunk) {
         const b = value.slice(0, chunk);

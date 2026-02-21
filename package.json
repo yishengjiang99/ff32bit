@@ -2,7 +2,7 @@
   "name": "ff32bit",
   "version": "1.0.0",
   "description": "the <strike>dark</strike> AWESOME side of 0x7fff0000",
-  "main": "./build/index.js",
+  "main": "./dist/ffplayer.js",
   "types": "./src/typing/FF32Play.d.ts",
   "keywords": [
     "rap music",
@@ -14,10 +14,12 @@
     "test": "test"
   },
   "scripts": {
-    "build": "tsc",
-    "test": "mocha"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "devDependencies": {
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1"
   }
 }
