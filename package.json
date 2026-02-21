@@ -14,7 +14,10 @@
     "test": "test"
   },
   "scripts": {
-    "build": "webpack",
+    "build": "tsc",
     "test": "mocha"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
   }
 }
