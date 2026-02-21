@@ -1,4 +1,4 @@
-import { procURL, workerURL } from "./blobURLs.js";
+import { procURL, workerURL } from "./blobURLs.ts";
 
 export class FF32Play extends EventTarget {
   ctx: AudioContext;
@@ -39,4 +39,18 @@ export class FF32Play extends EventTarget {
   next(): void {
     this.worker.postMessage({ cmd: "ff" });
   }
+}
+
+// App initialization when loaded directly in a browser
+if (typeof document !== "undefined") {
+  document.addEventListener("DOMContentLoaded", () => {
+    let fp: FF32Play | null = null;
+    document.querySelectorAll<HTMLAnchorElement>("a").forEach((a) => {
+      a.onclick = (e) => {
+        e.preventDefault();
+        fp = fp || new FF32Play();
+        fp.queue(a.href);
+      };
+    });
+  });
 }
