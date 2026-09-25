@@ -39,6 +39,15 @@ Preview production build:
 npm run preview
 ```
 
+Browser play test (needs [Playwright](https://playwright.dev/) and a machine with audio):
+
+```bash
+npm install --no-save playwright
+npx playwright install chromium
+npm run build
+npm run playtest
+```
+
 ## Project structure
 
 - `src/ffplayer.ts`: public player class (`FF32Play`) that wires the worker + worklet.
@@ -55,7 +64,7 @@ From browser code:
 import { FF32Play } from "./src/ffplayer.ts";
 
 const player = new FF32Play();
-player.queue("/file_example_WAV_10MG.wav");
+player.queue("./file_example_WAV_10MG.wav");
 ```
 
 `FF32Play` dispatches:
@@ -67,3 +76,5 @@ player.queue("/file_example_WAV_10MG.wav");
 
 - Worker is created as an ES module (`new Worker(url, { type: "module" })`).
 - `public/file_example_WAV_10MG.wav` is included as demo content for local testing.
+- The demo URL is relative so it resolves under GitHub Pages (`/ff32bit/`), not the domain root.
+- Browsers that cannot transfer a `ReadableStream` (Safari, including iOS) receive the same bytes as transferred `ArrayBuffer` chunks.

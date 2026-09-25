@@ -222,12 +222,34 @@ class PlaybackProcessor extends AudioWorkletProcessor {
     this.consumePcmBytes(value);
   }
 
+  noteBuffered() {
+    this.totalFrames++;
+    if (this.started === false && this.leftSamples.length > START_THRESHOLD_FRAMES) {
+      this.port.postMessage({ ready: 1 });
+      this.started = true;
+    }
+  }
+
   handleMesg(evt: MessageEvent) {
+    const data = evt.data || {};
+    if (data.error || data.done) return;
+    if (data.reset) {
+      this.resetStreamState();
+      return;
+    }
+    if (data.chunk) {
+      const bytes = data.chunk instanceof Uint8Array ? data.chunk : new Uint8Array(data.chunk);
+      this.pushChunk(bytes);
+      this.noteBuffered();
+      return;
+    }
+    if (!data.readable) return;
+
     this.resetStreamState();
     if (this.readable) {
       (this.readable as any).cancel();
     }
-    this.readable = evt.data.readable;
+    this.readable = data.readable;
     const reader = (this.readable as ReadableStream<Uint8Array>).getReader();
     const that = this;
     reader.read().then(function process({ done, value }: { done: boolean; value: Uint8Array | undefined }) {
@@ -238,11 +260,7 @@ class PlaybackProcessor extends AudioWorkletProcessor {
         return reader.read().then(process);
       }
       that.pushChunk(value);
-      that.totalFrames++;
-      if (that.started === false && that.leftSamples.length > START_THRESHOLD_FRAMES) {
-        that.port.postMessage({ ready: 1 });
-        that.started = true;
-      }
+      that.noteBuffered();
       reader.read().then(process);
     });
   }
@@ -266,9 +284,10 @@ class PlaybackProcessor extends AudioWorkletProcessor {
     if (!leftOut || !rightOut) {
       return true;
     }
+    const frames = leftOut.length;
     if (this.leftSamples.length < 2) {
       this.loss++;
-      for (let i = 0; i < 128; i++) {
+      for (let i = 0; i < frames; i++) {
         leftOut[i] = 0;
         rightOut[i] = 0;
       }
@@ -276,7 +295,7 @@ class PlaybackProcessor extends AudioWorkletProcessor {
     }
     this.total++;
     let sum = 0;
-    for (let i = 0; i < 128; i++) {
+    for (let i = 0; i < frames; i++) {
       const idx = Math.floor(this.readPos);
       const frac = this.readPos - idx;
       const l0 = this.leftSamples[idx];
@@ -291,7 +310,7 @@ class PlaybackProcessor extends AudioWorkletProcessor {
       this.readPos += this.srcToDstStep;
       if (Math.floor(this.readPos) >= this.leftSamples.length - 1) {
         this.loss++;
-        for (let j = i + 1; j < 128; j++) {
+        for (let j = i + 1; j < frames; j++) {
           leftOut[j] = 0;
           rightOut[j] = 0;
         }
