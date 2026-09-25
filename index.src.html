@@ -3,61 +3,248 @@
 
 <head>
   <meta charset="utf-8" />
-  <title>FF32Bit Player</title>
+  <title>FF32Bit — zero-copy WAV into an AudioWorklet</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     :root {
       color-scheme: dark;
+      --bg: #10110f;
+      --ink: #eceae4;
+      --muted: #9c988f;
+      --line: #2c2b27;
+      --card: #181916;
+      --steel: #9eb4c4;
+      --signal: #e2b657;
+      --live: #b6d7a8;
     }
+
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      background: #111;
-      color: #eee;
-      font: 16px/1.4 system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      font: 16px/1.45 system-ui, sans-serif;
     }
 
+    main {
+      width: min(100% - 2rem, 40rem);
+      margin: 0 auto;
+      padding: 1.75rem 0 3rem;
+    }
+
+    header p {
+      margin: 0.35rem 0 0;
+      color: var(--muted);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.7rem;
+      letter-spacing: -0.03em;
+    }
+
+    h2 {
+      margin: 2rem 0 0.6rem;
+      font-size: 1rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    a { color: var(--steel); }
+
     .player {
-      width: min(100% - 2rem, 28rem);
+      margin-top: 1.25rem;
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    button, .source {
+      font: inherit;
+      border-radius: 999px;
+      text-decoration: none;
       text-align: center;
     }
 
     button {
-      width: 100%;
-      font: inherit;
       padding: 0.9rem 1.2rem;
       border: 0;
-      border-radius: 999px;
-      background: #fff;
-      color: #111;
+      background: var(--ink);
+      color: #16150f;
+    }
+
+    .source {
+      display: block;
+      padding: 0.7rem 1.2rem;
+      border: 1px solid var(--line);
+      color: var(--ink);
     }
 
     #status {
       min-height: 1.4em;
-      margin: 1rem 0 0;
-      color: #aaa;
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .lead { color: var(--ink); }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.82rem;
+    }
+
+    .flow {
+      display: grid;
+      gap: 0.55rem;
+      margin: 0;
+    }
+
+    .card {
+      margin: 0;
+      padding: 0.85rem 0.9rem;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+
+    .card h3 {
+      margin: 0 0 0.35rem;
+      font-size: 1rem;
+    }
+
+    .card p, .card ol {
+      margin: 0.3rem 0;
+      color: var(--muted);
+    }
+
+    .card ol { padding-left: 1.15rem; }
+
+    .hop {
+      color: var(--signal);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.02em;
+      padding-left: 0.2rem;
+    }
+
+    .flow[data-state="loading"] [data-stage="main"],
+    .flow[data-state="loading"] [data-stage="worker"],
+    .flow[data-state="playing"] [data-stage="main"],
+    .flow[data-state="playing"] [data-stage="worker"],
+    .flow[data-state="playing"] [data-stage="worklet"] {
+      border-color: var(--live);
+    }
+
+    .pipe {
+      height: 1.4rem;
+      position: relative;
+    }
+
+    .pipe span {
+      position: absolute;
+      left: 1.1rem;
+      top: 0;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--signal);
+      opacity: 0;
+    }
+
+    .flow[data-state="loading"] .pipe span,
+    .flow[data-state="playing"] .pipe span {
+      opacity: 1;
+      animation: fall 1.1s linear infinite;
+    }
+
+    .flow[data-state="playing"] .pipe.to-speakers span {
+      animation-delay: 0.35s;
+    }
+
+    @keyframes fall {
+      from { transform: translateY(0); opacity: 0; }
+      15% { opacity: 1; }
+      to { transform: translateY(1.2rem); opacity: 0; }
+    }
+
+    .note {
+      margin-top: 0.8rem;
+      color: var(--muted);
+      font-size: 0.92rem;
     }
   </style>
 </head>
 
 <body>
-  <div class="player">
-    <button type="button" id="play">Play sample</button>
-    <p id="status">Tap to play</p>
-  </div>
+  <main>
+    <header>
+      <h1>FF32Bit</h1>
+      <p>Stream a WAV from the network into an AudioWorklet without handing the bytes to the main thread.</p>
+    </header>
+
+    <div class="player">
+      <button type="button" id="play">Play sample</button>
+      <p id="status">Tap to play</p>
+      <a class="source" href="https://github.com/yishengjiang99/ff32bit">Source on GitHub</a>
+    </div>
+
+    <h2>Zero-copy</h2>
+    <p class="lead">“Zero-copy” here means the file bytes change owner instead of being cloned through the main thread. <code>postMessage</code> normally structured-clones data. A transfer list moves the object: the sender loses it, the receiver gets it.</p>
+    <p>The worker fetches <code>Range</code> slices of the WAV. It then does one of two transfers into the worklet’s <code>MessagePort</code>:</p>
+    <ul>
+      <li>Chrome and Firefox accept a <code>ReadableStream</code> in the transfer list. The worklet reads that same stream.</li>
+      <li>Safari throws <code>DataCloneError</code> on a stream. The worker transfers each chunk’s <code>ArrayBuffer</code> instead. The buffer is detached, not copied.</li>
+    </ul>
+    <p class="note">Decoding is not free. The worklet turns integer PCM into floats and writes those into the <code>Float32Array</code>s Web Audio already allocated for <code>process()</code>. The network hop is the part that does not copy.</p>
+
+    <h2>Three threads</h2>
+    <div class="flow" id="flow" data-state="idle">
+      <article class="card" data-stage="main">
+        <h3>Main thread</h3>
+        <p>The tap creates the <code>AudioContext</code>, calls <code>resume()</code>, and wires a worker to an <code>AudioWorkletNode</code>. It never reads the file.</p>
+        <p><a href="https://github.com/yishengjiang99/ff32bit/blob/main/src/ffplayer.ts">src/ffplayer.ts</a></p>
+      </article>
+      <div class="pipe" aria-hidden="true"><span></span></div>
+      <p class="hop">transfer MessagePort → worker</p>
+      <article class="card" data-stage="worker">
+        <h3>Worker</h3>
+        <ol>
+          <li><code>fetch</code> with <code>Range: bytes=start-end</code></li>
+          <li>Own the response body</li>
+          <li>Transfer the stream, or each <code>ArrayBuffer</code></li>
+        </ol>
+        <p><a href="https://github.com/yishengjiang99/ff32bit/blob/main/src/worker.ts">src/worker.ts</a></p>
+      </article>
+      <div class="pipe to-speakers" aria-hidden="true"><span></span></div>
+      <p class="hop">transfer bytes → audio thread</p>
+      <article class="card" data-stage="worklet">
+        <h3>Audio worklet</h3>
+        <ol>
+          <li>Parse the RIFF header once</li>
+          <li>Decode PCM and resample if the device rate differs</li>
+          <li><code>process()</code> fills ~128 frames per callback</li>
+        </ol>
+        <p><a href="https://github.com/yishengjiang99/ff32bit/blob/main/src/playback-processor.ts">src/playback-processor.ts</a></p>
+      </article>
+      <p class="hop">in-place write → speakers</p>
+    </div>
+  </main>
   <script type="module">
     import { FF32Play } from "./src/ffplayer.ts";
 
     const status = document.querySelector("#status");
     const button = document.querySelector("#play");
+    const flow = document.querySelector("#flow");
     let player;
     let wired = false;
 
     function setStatus(text) {
       status.textContent = text;
+      if (/Playing/i.test(text)) flow.dataset.state = "playing";
+      else if (/Loading/i.test(text)) flow.dataset.state = "loading";
+      else if (/fail|error|not found|did not/i.test(text)) flow.dataset.state = "error";
+      else flow.dataset.state = "idle";
     }
 
     async function sampleUrl() {
