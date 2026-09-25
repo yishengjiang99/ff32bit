@@ -41,44 +41,15 @@
       color: #aaa;
     }
   </style>
+  <script type="module" crossorigin src="./assets/index.js"></script>
+  <link rel="modulepreload" crossorigin href="./ffplayer.js">
 </head>
 
 <body>
   <div class="player">
-    <button type="button" id="play" data-src="./file_example_WAV_10MG.wav">Play sample</button>
+    <button type="button" id="play">Play sample</button>
     <p id="status">Tap to play</p>
   </div>
-  <script type="module">
-    import { FF32Play } from "./src/ffplayer.ts";
-
-    const status = document.querySelector("#status");
-    const button = document.querySelector("#play");
-    let player;
-    let wired = false;
-
-    function setStatus(text) {
-      status.textContent = text;
-    }
-
-    button.addEventListener("click", () => {
-      const url = new URL(button.dataset.src, location.href).href;
-      player = player || new FF32Play();
-      if (!wired) {
-        wired = true;
-        player.addEventListener("progress", (event) => {
-          const detail = event.detail?.data ?? event.detail ?? {};
-          if (detail.ready) setStatus("Playing");
-          if (detail.stats) setStatus(`Playing · ${detail.stats.buffered}s buffered`);
-          if (detail.error) setStatus(detail.error);
-        });
-        player.addEventListener("error", (event) => {
-          setStatus(event.detail || "Playback failed");
-        });
-      }
-      setStatus("Loading…");
-      player.queue(url).catch((err) => setStatus(String(err)));
-    });
-  </script>
 </body>
 
 </html>

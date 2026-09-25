@@ -54,7 +54,8 @@ npm run playtest
 - `src/worker.ts`: fetch/stream worker that transfers a `ReadableStream`.
 - `src/playback-processor.ts`: AudioWorklet processor that parses WAV metadata and outputs stereo frames.
 - `src/blobURLs.ts`: Vite worker URL imports.
-- `index.html`: simple demo page.
+- `index.src.html`: demo page source. `npm run build` writes the static `index.html` GitHub Pages actually serves.
+- `playtest.cjs`: browser play test against `vite preview`.
 
 ## Usage
 
