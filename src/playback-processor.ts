@@ -1,7 +1,3 @@
-const frame = 36;
-const chunk = 1024;
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
 declare class AudioWorkletProcessor {
   readonly port: MessagePort;
   constructor();
@@ -96,10 +92,6 @@ class PlaybackProcessor extends AudioWorkletProcessor {
   rightSamples: number[];
   readPos: number;
   started: boolean;
-  loss: number;
-  total: number;
-  rms: number;
-  totalFrames: number;
   readable: ReadableStream | null;
   wavProbeBuffer: Uint8Array;
   pcmRemainder: Uint8Array;
@@ -118,10 +110,6 @@ class PlaybackProcessor extends AudioWorkletProcessor {
     this.started = false;
     this.port.postMessage("initialized");
     this.port.onmessage = this.handleMesg.bind(this);
-    this.loss = 0;
-    this.total = 0;
-    this.rms = 0;
-    this.totalFrames = 0;
     this.readable = null;
     this.wavProbeBuffer = new Uint8Array(0);
     this.pcmRemainder = new Uint8Array(0);
@@ -223,7 +211,6 @@ class PlaybackProcessor extends AudioWorkletProcessor {
   }
 
   noteBuffered() {
-    this.totalFrames++;
     if (this.started === false && this.leftSamples.length > START_THRESHOLD_FRAMES) {
       this.port.postMessage({ ready: 1 });
       this.started = true;
@@ -247,7 +234,7 @@ class PlaybackProcessor extends AudioWorkletProcessor {
 
     this.resetStreamState();
     if (this.readable) {
-      (this.readable as any).cancel();
+      this.readable.cancel();
     }
     this.readable = data.readable;
     const reader = (this.readable as ReadableStream<Uint8Array>).getReader();
@@ -265,18 +252,6 @@ class PlaybackProcessor extends AudioWorkletProcessor {
     });
   }
 
-  report() {
-    this.port.postMessage({
-      stats: {
-        rms: this.rms,
-        downloaded: this.totalFrames,
-        played: this.total,
-        buffered: ((this.leftSamples.length - Math.floor(this.readPos)) / sampleRate).toFixed(3),
-        lossPercent: ((this.loss / this.total) * 100).toFixed(2),
-      },
-    });
-  }
-
   process(_inputs: Float32Array[][], outputs: Float32Array[][], _parameters: Record<string, Float32Array>): boolean {
     if (this.started === false) return true;
     const leftOut = outputs[0][0];
@@ -286,15 +261,12 @@ class PlaybackProcessor extends AudioWorkletProcessor {
     }
     const frames = leftOut.length;
     if (this.leftSamples.length < 2) {
-      this.loss++;
       for (let i = 0; i < frames; i++) {
         leftOut[i] = 0;
         rightOut[i] = 0;
       }
       return true;
     }
-    this.total++;
-    let sum = 0;
     for (let i = 0; i < frames; i++) {
       const idx = Math.floor(this.readPos);
       const frac = this.readPos - idx;
@@ -306,10 +278,8 @@ class PlaybackProcessor extends AudioWorkletProcessor {
       const right = r0 + (r1 - r0) * frac;
       leftOut[i] = left;
       rightOut[i] = right;
-      sum += left * left + right * right;
       this.readPos += this.srcToDstStep;
       if (Math.floor(this.readPos) >= this.leftSamples.length - 1) {
-        this.loss++;
         for (let j = i + 1; j < frames; j++) {
           leftOut[j] = 0;
           rightOut[j] = 0;
@@ -317,7 +287,6 @@ class PlaybackProcessor extends AudioWorkletProcessor {
         break;
       }
     }
-    this.rms = Math.sqrt(sum / 256);
     const drop = Math.floor(this.readPos) - 1;
     if (drop >= COMPACT_THRESHOLD_FRAMES) {
       this.leftSamples.splice(0, drop);
@@ -329,5 +298,3 @@ class PlaybackProcessor extends AudioWorkletProcessor {
 }
 
 registerProcessor("playback-processor", PlaybackProcessor);
-
-export { frame, chunk };

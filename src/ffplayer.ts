@@ -67,8 +67,4 @@ export class FF32Play extends EventTarget {
     }
     this.pendingUrl = url;
   }
-
-  next(): void {
-    this.worker?.postMessage({ cmd: "ff" });
-  }
 }

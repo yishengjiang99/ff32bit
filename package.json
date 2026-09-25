@@ -1,18 +1,8 @@
 {
   "name": "ff32bit",
   "version": "1.0.0",
-  "description": "the <strike>dark</strike> AWESOME side of 0x7fff0000",
-  "main": "./dist/ffplayer.js",
-  "types": "./src/typing/FF32Play.d.ts",
-  "keywords": [
-    "rap music",
-    "ES2018 streams"
-  ],
-  "author": "",
+  "description": "Stream a WAV from fetch into an AudioWorklet.",
   "license": "ISC",
-  "directories": {
-    "test": "test"
-  },
   "scripts": {
     "dev": "vite",
     "build": "vite build && node scripts/stage-pages.cjs",
